@@ -9,25 +9,41 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 
+import org.springframework.security.config.Customizer;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
 @Configuration
 public class adminSecurityConfig {
+	@Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.setAllowedOrigins(List.of(
+            "http://127.0.0.1:5500", 
+            "http://localhost:5500", 
+            "http://127.0.0.1:5501", 
+            "http://localhost:5501",
+            "https://quantifyre-iris-super-admin.vercel.app", // Correct spelling
+            "https://quantifire-iris-frontend.vercel.app"
+        ));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(List.of("*"));
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
+    }
 
 	@Bean
 	@Order(1) 
 	public SecurityFilterChain adminFilterChain(HttpSecurity http) throws Exception {
 	    http
+	        .cors(Customizer.withDefaults())
 	        .securityMatcher("/api/admin/**", "/uploads/**") 
-	        .cors(cors -> cors.configurationSource(request -> {
-	            CorsConfiguration config = new CorsConfiguration();
-	            // Sabhi possible frontend ports add karein
-	            config.setAllowedOrigins(List.of("http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:5501", "http://localhost:5501","https://quantifire-iris-frontend.vercel.app","https://quantifyre-iris-super-admin.vercel.app"));
-	            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-	            config.setAllowedHeaders(List.of("*"));
-	            config.setAllowCredentials(true);
-	            return config;
-	        }))
 	        .csrf(csrf -> csrf.disable())
 	        .authorizeHttpRequests(auth -> auth
+	        	.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 	            .requestMatchers("/api/admin/agencies/**",
 	            		         "/api/admin/login/**",
 	            		         "/api/admin/campaigns/**",
