@@ -20,7 +20,7 @@ public class adminSecurityConfig {
 	        .cors(cors -> cors.configurationSource(request -> {
 	            CorsConfiguration config = new CorsConfiguration();
 	            // Sabhi possible frontend ports add karein
-	            config.setAllowedOrigins(List.of("http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:5501", "http://localhost:5501","https://quantifire-iris-frontend.vercel.app"));
+	            config.setAllowedOrigins(List.of("http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:5501", "http://localhost:5501","https://quantifire-iris-frontend.vercel.app","https://quantifyre-iris-super-admin.vercel.app"));
 	            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 	            config.setAllowedHeaders(List.of("*"));
 	            config.setAllowCredentials(true);
