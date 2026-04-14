@@ -49,6 +49,7 @@ public class adminSecurityConfig {
 	            		         "/api/admin/campaigns/**",
 	            		         "/api/admin/settings/**",
 	            		         "/api/admin/top-notifications/**",
+	            		         "/api/admin/invoices/**",
 	            		         "/api/admin/ping",
 	            		         "/uploads/**").permitAll()
 	            .anyRequest().authenticated()
