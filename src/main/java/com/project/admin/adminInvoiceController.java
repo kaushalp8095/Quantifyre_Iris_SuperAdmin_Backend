@@ -47,4 +47,12 @@ public class adminInvoiceController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
+    
+ // 4. Get Single Invoice Details (For View/Preview)
+    @GetMapping("/details/{id}")
+    public ResponseEntity<?> getInvoiceDetails(@PathVariable Long id) {
+        return invoiceService.getInvoiceById(id)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
 }
