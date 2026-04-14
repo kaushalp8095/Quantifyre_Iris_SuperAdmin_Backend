@@ -17,7 +17,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = {"http://127.0.0.1:5500", "http://localhost:5500"}, allowCredentials = "true") // 🔴 DHYAN DEIN: Cookie ke liye origin fix aur allowCredentials true hona chahiye
+@CrossOrigin(origins = {"http://127.0.0.1:5500", "http://localhost:5500","https://quantifyre-iris-super-admin.vercel.app"}, allowCredentials = "true") // 🔴 DHYAN DEIN: Cookie ke liye origin fix aur allowCredentials true hona chahiye
 public class adminLoginController {
 
     @Autowired
@@ -49,11 +49,12 @@ public class adminLoginController {
                 // Cookie Setup
                 Cookie adminCookie = new Cookie("admin_session", admin.getId() + "_" + admin.getEmail());
                 adminCookie.setHttpOnly(true);
-                adminCookie.setSecure(false); 
+                adminCookie.setSecure(true); 
                 adminCookie.setPath("/");     
                 adminCookie.setMaxAge(24 * 60 * 60); 
                 
                 res.addCookie(adminCookie);
+                res.setHeader("Set-Cookie", "admin_session=" + admin.getId() + "; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=86400");
                 
                 try {
                     adminLoginHistory history = new adminLoginHistory();
@@ -73,7 +74,7 @@ public class adminLoginController {
                     history.setDeviceInfo(parseUserAgent(userAgent)); // Helper niche hai
                     
                     // Location (Filhaal static, aap chaho toh IP-API integrate kar sakte ho)
-                    history.setLocation("Ahmedabad, India"); 
+                    history.setLocation("IP Logged: " + ip); 
 
                     // Service Call (Jo SQL + Mongo dono mein save karega)
                     adminService.saveAdminLoginHistory(history);

@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.project.common.service.CampaignService; // Aapki wahi service!
+import com.project.common.service.CampaignService;
 
 @RestController
 @RequestMapping("/api/admin/campaigns")
@@ -15,17 +15,22 @@ public class adminCampaignsController {
     @Autowired
     private CampaignService campaignService;
 
+    // ==========================================
+    // 1. GET CAMPAIGNS LIST (Admin Filtered)
+    // ==========================================
     @GetMapping("/list")
-    public ResponseEntity<List<Map<String, Object>>> getAllCampaignsList() {
+    public ResponseEntity<List<Map<String, Object>>> getAllCampaignsList(@RequestParam Long adminId) { // 👈 adminId accept kiya
         try {
-            List<Map<String, Object>> campaigns = campaignService.getAllCampaignsForAdmin();
+            // Ab Service ko adminId pass kar rahe hain
+            List<Map<String, Object>> campaigns = campaignService.getAllCampaignsForAdmin(adminId);
             return ResponseEntity.ok(campaigns);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(null);
+            System.err.println("Error fetching campaigns: " + e.getMessage());
+            return ResponseEntity.status(500).body(new ArrayList<>());
         }
     }
     
- // ==========================================
+    // ==========================================
     // 2. DELETE CAMPAIGN (ADMIN)
     // ==========================================
     @DeleteMapping("/delete/{id}")

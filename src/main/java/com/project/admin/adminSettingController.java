@@ -15,7 +15,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/admin/settings")
-@CrossOrigin(origins = "http://127.0.0.1:5500", allowCredentials = "true")
+@CrossOrigin(origins = {"http://127.0.0.1:5500","https://quantifyre-iris-super-admin.vercel.app"}, allowCredentials = "true")
 public class adminSettingController {
 
     @Autowired
@@ -62,8 +62,8 @@ public class adminSettingController {
             // C. Database mein naya URL save karo
             adminService.updateProfileLogo(id, fileUrl);
             
-            // D. Purana logo Supabase storage se DELETE kardo 
-              if (oldLogoUrl != null && !oldLogoUrl.isEmpty() && oldLogoUrl.startsWith("http")) {
+            // D. // Default image ko chhod kar baaki sab delete karo
+            if (oldLogoUrl != null && oldLogoUrl.contains("admin-logos")) { 
                 storageService.deleteFileFromUrl(oldLogoUrl);
             }
             

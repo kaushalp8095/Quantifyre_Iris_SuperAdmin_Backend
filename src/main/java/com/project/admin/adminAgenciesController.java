@@ -86,9 +86,7 @@ public class adminAgenciesController {
                 // --- 🟢 SUPABASE S3 LOGO UPDATE ---
                 if (logo != null && !logo.isEmpty()) {
                     try {
-                        // Naya logo upload karo aur naya URL lelo
-                        // Note: S3 mein purani file delete karne ki zaroorat nahi hoti 
-                        // kyunki hum unique names use kar rahe hain (UUID). 
+                         
                         String newPublicUrl = storageService.uploadFile(logo, "agency-logos");
                         agency.setAgencyLogo(newPublicUrl);
                     } catch (Exception e) {
@@ -109,8 +107,9 @@ public class adminAgenciesController {
     // 3. LIST & DETAILS
     // ==========================================
     @GetMapping("/list")
-    public ResponseEntity<List<adminAgenciesStatsdto>> getAgenciesList() {
-        return ResponseEntity.ok(agencyService.getAllAgenciesForTable());
+    public ResponseEntity<List<adminAgenciesStatsdto>> getAgenciesList(@RequestParam Long adminId) {
+        // Service ko adminId pass karein
+        return ResponseEntity.ok(agencyService.getAllAgenciesForTable(adminId));
     }
 
     @GetMapping("/details/{id}")
