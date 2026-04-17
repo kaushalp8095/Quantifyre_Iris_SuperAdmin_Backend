@@ -47,14 +47,11 @@ public class adminLoginController {
             if (admin.getPassword().equals(password)) {
                 
                 // Cookie Setup
-                Cookie adminCookie = new Cookie("admin_session", admin.getId() + "_" + admin.getEmail());
-                adminCookie.setHttpOnly(true);
-                adminCookie.setSecure(true); 
-                adminCookie.setPath("/");     
-                adminCookie.setMaxAge(24 * 60 * 60); 
-                
-                res.addCookie(adminCookie);
-                res.setHeader("Set-Cookie", "admin_session=" + admin.getId() + "; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=86400");
+            	// 1. COOKIE SETUP (SameSite=None; Secure zaroori hai Vercel ke liye)
+                String cookieValue = admin.getId() + "_" + admin.getEmail();
+                String cookieHeader = String.format("admin_session=%s; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=%d", 
+                                        cookieValue, 24 * 60 * 60); // 24 hours
+                res.setHeader("Set-Cookie", cookieHeader);
                 
                 try {
                     adminLoginHistory history = new adminLoginHistory();
@@ -107,6 +104,7 @@ public class adminLoginController {
                 response.put("name", admin.getFirstName() + " " + admin.getLastName());
                 response.put("profileLogo", admin.getProfileLogo());
                 response.put("email", admin.getEmail());
+                response.put("loginTime", System.currentTimeMillis());
 
                 return ResponseEntity.ok(response);
             } else {
