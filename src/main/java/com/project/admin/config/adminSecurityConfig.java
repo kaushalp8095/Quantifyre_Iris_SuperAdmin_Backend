@@ -40,6 +40,7 @@ public class adminSecurityConfig {
 	public SecurityFilterChain adminFilterChain(HttpSecurity http) throws Exception {
 	    http
 	        .cors(Customizer.withDefaults())
+	        .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
 	        .securityMatcher("/api/admin/**", "/uploads/**") 
 	        .csrf(csrf -> csrf.disable())
 	        .authorizeHttpRequests(auth -> auth
