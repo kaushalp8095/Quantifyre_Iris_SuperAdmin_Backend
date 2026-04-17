@@ -135,4 +135,13 @@ public class adminLoginController {
         return "Web Browser";
     }
     
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletResponse res) {
+        // Cookie ko expire karne ke liye Max-Age 0 set karein
+        String cookieHeader = "admin_session=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0";
+        res.setHeader("Set-Cookie", cookieHeader);
+        
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Logged out"));
+    }
+    
 }
