@@ -1,26 +1,24 @@
 # Stage 1: Build
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
-
-# 1. Pura project copy karein (Jisme libs folder aur pom.xml ho)
 COPY . .
-
-# 2. Jo naya common.jar aapne dala hai, use manually Maven repo me install karein
-# Note: Agar aapki jar 'libs/common.jar' me hai toh niche wala path sahi hai
-RUN mvn install:install-file \
-    -Dfile=libs/common.jar \
-    -DgroupId=com.project \
-    -DartifactId=common \
-    -Dversion=0.0.1-SNAPSHOT \
-    -Dpackaging=jar
-
-# 3. Ab Agency (Client) ko build karein
 RUN mvn clean package -DskipTests
 
 # Stage 2: Run
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jdk
 WORKDIR /app
+
+# Step 1: Copy the jar file from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Step 2: Give read/execute permissions to the app directory and jar file
+# Isse koi bhi error nahi aayega chahe koi bhi user ho
+RUN chmod 777 /app && chmod 777 app.jar
+
+# Step 3: Switch to UID 1000 (Hugging Face Requirement) without creating it
+USER 1000
+
+EXPOSE 7860
+
+# Step 4: Run the application
+ENTRYPOINT ["java","-jar","app.jar","--server.port=7860","--server.address=0.0.0.0"]
