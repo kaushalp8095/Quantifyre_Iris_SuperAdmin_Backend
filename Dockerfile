@@ -1,26 +1,24 @@
-# Stage 1: Build All Modules
+# Stage 1: Build
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
-
-# Ye line aapke saare folders (common, admin, etc.) ko copy karegi
 COPY . .
+RUN mvn clean package -DskipTests
 
-# DHYAN DEIN: Yahan 'install' likhna zaroori hai taaki 'common' locally save ho jaye
-RUN mvn clean install -DskipTests
-
-# Stage 2: Run the Admin App
+# Stage 2: Run
 FROM eclipse-temurin:21-jdk
 WORKDIR /app
 
-# Yahan '/app/admin/target' likha hai. Agar aapke admin folder ka naam kuch aur hai 
-# (jaise 'admin-backend' ya 'Quantifyre_Admin'), toh 'admin' ki jagah wo naam daalein.
-COPY --from=build /app/admin/target/*.jar app.jar
+# Step 1: Copy the jar file from the build stage
+COPY --from=build /app/target/*.jar app.jar
 
-# Hugging Face Security Requirements
+# Step 2: Give read/execute permissions to the app directory and jar file
+# Isse koi bhi error nahi aayega chahe koi bhi user ho
 RUN chmod 777 /app && chmod 777 app.jar
+
+# Step 3: Switch to UID 1000 (Hugging Face Requirement) without creating it
 USER 1000
 
 EXPOSE 7860
 
-# Run the application
+# Step 4: Run the application
 ENTRYPOINT ["java","-jar","app.jar","--server.port=7860","--server.address=0.0.0.0"]
