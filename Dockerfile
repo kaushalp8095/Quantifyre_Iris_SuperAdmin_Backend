@@ -2,32 +2,24 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# 🔴 Step 1: Copy pom + libs first (important for caching & dependency)
-COPY pom.xml .
-COPY libs ./libs
+# Saara code copy karein (Common aur Admin dono aayenge)
+COPY . .
 
-# 🔴 Step 2: Download dependencies (system scope jar bhi pick karega)
-RUN mvn dependency:go-offline
-
-# 🔴 Step 3: Copy rest of code
-COPY src ./src
-
-# 🔴 Step 4: Build jar
-RUN mvn clean package -DskipTests
-
+# Pehle poore project ko ek sath install karein (Isse common module pehle build hoga)
+RUN mvn clean install -DskipTests
 
 # Stage 2: Run
 FROM eclipse-temurin:21-jdk
 WORKDIR /app
 
-# Copy jar
-COPY --from=build /app/target/*.jar app.jar
+# DHYAN DEIN: Kyunki ye multi-module hai, admin ki jar file 'admin' folder ke andar banegi
+COPY --from=build /app/admin/target/*.jar app.jar
 
-# Permissions
+# Permissions aur User (Hugging Face Requirement)
 RUN chmod 777 /app && chmod 777 app.jar
-
 USER 1000
 
 EXPOSE 7860
 
+# Run the application
 ENTRYPOINT ["java","-jar","app.jar","--server.port=7860","--server.address=0.0.0.0"]
