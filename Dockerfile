@@ -11,11 +11,10 @@ WORKDIR /app
 # Step 1: Copy the jar file from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Step 2: Give read/execute permissions to the app directory and jar file
-# Isse koi bhi error nahi aayega chahe koi bhi user ho
+# Step 2: Give read/execute permissions
 RUN chmod 777 /app && chmod 777 app.jar
 
-# Step 3: Switch to UID 1000 (Hugging Face Requirement) without creating it
+# Step 3: Switch to UID 1000
 USER 1000
 
 EXPOSE 7860
