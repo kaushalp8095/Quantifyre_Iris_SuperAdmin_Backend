@@ -55,4 +55,9 @@ public class adminInvoiceController {
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
+    
+    @GetMapping("/next-no")
+    public ResponseEntity<String> getNextInvoiceNo() {
+        return ResponseEntity.ok(invoiceService.generateNextInvoiceNo());
+    }
 }
