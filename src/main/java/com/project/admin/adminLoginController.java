@@ -5,19 +5,22 @@ import com.project.common.models.adminLoginModel;
 import com.project.common.service.AdminLoginService;
 import com.project.common.service.EmailService;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse; // Import zaroori hai
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = {"http://127.0.0.1:5500", "http://localhost:5500","https://quantifyre-iris-super-admin.vercel.app"}, allowCredentials = "true") // 🔴 DHYAN DEIN: Cookie ke liye origin fix aur allowCredentials true hona chahiye
+@CrossOrigin(origins = {"http://127.0.0.1:5500", "https://quantifyre-iris-super-admin.vercel.app"}, allowCredentials = "true")
 public class adminLoginController {
 
     @Autowired
@@ -26,61 +29,50 @@ public class adminLoginController {
     @Autowired
     private EmailService emailService;
 
+    // ==========================================
+    // MAIN LOGIN API
+    // ==========================================
     @PostMapping("/login")
     public ResponseEntity<?> loginAdmin(@RequestBody Map<String, String> credentials, HttpServletResponse res, HttpServletRequest request) {
         String email = credentials.get("email");
         String password = credentials.get("password");
 
-        // Null or Empty checks
-        if (email == null || email.trim().isEmpty() || password == null || password.trim().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("status", "error", "message", "Email and password are required"));
+        if (email == null || password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", "error", "message", "Missing credentials"));
         }
 
-        // Service call to find admin
-        Optional<adminLoginModel> adminOpt = adminService.findByEmail(email);
+        Optional<adminLoginModel> adminOpt = adminService.findByEmail(email.trim().toLowerCase());
 
         if (adminOpt.isPresent()) {
             adminLoginModel admin = adminOpt.get();
 
-            // 🔴 Password Match Check
+            // Password Match Check
             if (admin.getPassword().equals(password)) {
                 
-                // Cookie Setup
-            	// 1. COOKIE SETUP (SameSite=None; Secure zaroori hai Vercel ke liye)
-                String cookieValue = admin.getId() + "_" + admin.getEmail();
-                String cookieHeader = String.format("admin_session=%s; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=%d", 
-                                        cookieValue, 24 * 60 * 60); // 24 hours
-                res.setHeader("Set-Cookie", cookieHeader);
-                
+                // 1. Cookie Setup (UUID Token)
+                setupCookies(res, admin.getId().toString());
+
+                // 2. Login History & Alert Logic
                 try {
                     adminLoginHistory history = new adminLoginHistory();
                     history.setAdminId(admin.getId());
                     history.setEmail(admin.getEmail());
                     history.setLoginTime(LocalDateTime.now());
                     
-                    // IP Address nikalne ka logic
                     String ip = request.getHeader("X-Forwarded-For");
-                    if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                        ip = request.getRemoteAddr();
-                    }
-                    history.setIpAddress(ip);
-
-                    // Device Info (User-Agent)
-                    String userAgent = request.getHeader("User-Agent");
-                    history.setDeviceInfo(parseUserAgent(userAgent)); // Helper niche hai
+                    if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) ip = request.getRemoteAddr();
                     
-                    // Location (Filhaal static, aap chaho toh IP-API integrate kar sakte ho)
-                    history.setLocation("IP Logged: " + ip); 
+                    history.setIpAddress(ip);
+                    history.setDeviceInfo(parseUserAgent(request.getHeader("User-Agent")));
+                    history.setLocation(fetchLocationFromIp(ip));
 
-                    // Service Call (Jo SQL + Mongo dono mein save karega)
                     adminService.saveAdminLoginHistory(history);
                     
+                    // 🟢 ALERTS LOGIC (Same as Agency Module)
                     if (admin.isLoginAlertsEnabled()) {
-                        String finalIp = history.getIpAddress();
+                        String finalIp = ip;
                         new Thread(() -> {
                             try {
-                                // Agency wale method ko hi use kar rahe hain (Agar same parameters hain)
                                 emailService.sendLoginAlertEmail(
                                     admin.getEmail(), 
                                     history.getDeviceInfo(), 
@@ -93,55 +85,76 @@ public class adminLoginController {
                             }
                         }).start();
                     }
-                } catch (Exception e) {
-                    System.err.println("❌ History Error: " + e.getMessage());
-                }
+                    
+                } catch (Exception e) { System.err.println("❌ History/Alert Error: " + e.getMessage()); }
 
-                Map<String, Object> response = new HashMap<>();
-                response.put("status", "success");
-                response.put("message", "Login Successful");
-                response.put("adminId", admin.getId());
-                response.put("name", admin.getFirstName() + " " + admin.getLastName());
-                response.put("profileLogo", admin.getProfileLogo());
-                response.put("email", admin.getEmail());
-                response.put("loginTime", System.currentTimeMillis());
-
-                return ResponseEntity.ok(response);
-            } else {
-                // 🔴 WRONG PASSWORD - Return 401 Unauthorized
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("status", "error", "message", "*Invalid Credentials!"));
+                return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "adminId", admin.getId(),
+                    "name", admin.getFirstName() + " " + admin.getLastName()
+                ));
             }
-        } else {
-            // 🔴 WRONG EMAIL - Return 404 Not Found
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("status", "error", "message", "*Invalid Credentials!"));
         }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status", "error", "message", "Invalid Credentials"));
     }
-    
-    @GetMapping("/security/login-activity/{id}")
-    public ResponseEntity<?> getLoginActivity(@PathVariable Long id) {
-        List<adminLoginHistory> history = adminService.getAdminLoginHistory(id);
-        return ResponseEntity.ok(history);
+
+    // ==========================================
+    // HELPER: COOKIE MANAGEMENT (Same as Agency)
+    // ==========================================
+    private void setupCookies(HttpServletResponse response, String adminId) {
+        ResponseCookie cookie = ResponseCookie.from("admin_session", adminId)
+                .httpOnly(true)
+                .secure(true) // HTTPS zaroori hai
+                .path("/")
+                .maxAge(24 * 60 * 60)
+                .sameSite("None") // Cross-Domain Zaroori
+                .build();
+        
+        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
-    
-    
- // 💡 Helper method for User Agent (Isko Controller ke end mein daal dena)
+
+    // ==========================================
+    // HELPER: LOCATION & DEVICE
+    // ==========================================
+    @SuppressWarnings("unchecked")
+    private String fetchLocationFromIp(String ip) {
+        // Localhost checking
+        if (ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1")) {
+            return "Localhost (Dev)";
+        }
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            String url = "http://ip-api.com/json/" + ip;
+            
+            // API call to get city and country
+            Map<String, Object> apiResponse = restTemplate.getForObject(url, Map.class);
+            
+            if (apiResponse != null && "success".equals(apiResponse.get("status"))) {
+                return apiResponse.get("city") + ", " + apiResponse.get("country");
+            }
+        } catch (Exception e) {
+            System.err.println("Location API Error: " + e.getMessage());
+        }
+        return "Unknown Location"; // Default fallback
+    }
+
     private String parseUserAgent(String userAgent) {
-        if (userAgent == null) return "Unknown";
+        if (userAgent == null) return "Unknown Device";
+        if (userAgent.contains("Edg/")) return "Edge on Windows";
         if (userAgent.contains("Chrome")) return "Chrome on Windows";
         if (userAgent.contains("Firefox")) return "Firefox";
         if (userAgent.contains("iPhone")) return "Safari on iPhone";
         return "Web Browser";
     }
     
+    // ==========================================
+    // LOGOUT
+    // ==========================================
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse res) {
-        // Cookie ko expire karne ke liye Max-Age 0 set karein
-        String cookieHeader = "admin_session=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0";
-        res.setHeader("Set-Cookie", cookieHeader);
-        
-        return ResponseEntity.ok(Map.of("status", "success", "message", "Logged out"));
+        ResponseCookie cookie = ResponseCookie.from("admin_session", "")
+                .httpOnly(true).secure(true).path("/").maxAge(0).sameSite("None").build();
+        res.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        return ResponseEntity.ok(Map.of("status", "success"));
     }
-    
 }
