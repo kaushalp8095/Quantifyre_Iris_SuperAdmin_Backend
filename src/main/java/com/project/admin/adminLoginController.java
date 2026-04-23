@@ -138,14 +138,29 @@ public class adminLoginController {
         return "Unknown Location"; // Default fallback
     }
 
+ // ==========================================
+    // HELPER: USER AGENT PARSER (Chrome, Windows, etc.)
+    // ==========================================
     private String parseUserAgent(String userAgent) {
-        if (userAgent == null) return "Unknown Device";
-        if (userAgent.contains("Edg/")) return "Edge on Windows";
-        if (userAgent.contains("Chrome")) return "Chrome on Windows";
-        if (userAgent.contains("Firefox")) return "Firefox";
-        if (userAgent.contains("iPhone")) return "Safari on iPhone";
-        return "Web Browser";
+        if (userAgent == null || userAgent.isEmpty()) return "Unknown Device";
+        
+        String browser = "Web Browser";
+        if (userAgent.contains("Edg/")) browser = "Edge";
+        else if (userAgent.contains("Chrome/")) browser = "Chrome";
+        else if (userAgent.contains("Firefox/")) browser = "Firefox";
+        else if (userAgent.contains("Safari/") && !userAgent.contains("Chrome/")) browser = "Safari";
+
+        String os = "Unknown OS";
+        if (userAgent.contains("Windows NT 10.0")) os = "Windows 10/11";
+        else if (userAgent.contains("Windows NT")) os = "Windows";
+        else if (userAgent.contains("Android")) os = "Android";
+        else if (userAgent.contains("iPhone")) os = "iOS";
+        else if (userAgent.contains("Mac")) os = "MacOS";
+        else if (userAgent.contains("Linux")) os = "Linux";
+        
+        return browser + " on " + os;
     }
+
     
     // ==========================================
     // LOGOUT
