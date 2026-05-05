@@ -53,6 +53,8 @@ public class adminSecurityConfig {
 	            		         "/api/admin/invoices/**",
 	            		         "/api/admin/roles/**",
 	            		         "/api/admin/activity-logs/**",
+	            		         "/api/admin/subscriptions/**",
+	            		         "/api/admin/reports/**",  
 	            		         "/api/admin/ping",
 	            		         "/uploads/**").permitAll()
 	            .anyRequest().authenticated()
