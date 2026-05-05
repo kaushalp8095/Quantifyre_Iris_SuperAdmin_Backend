@@ -285,12 +285,17 @@ public class adminReportsController {
         try {
             List<adminReportModel> past = reportService.getAllReports(adminId);
             long total = past.size();
-            // Simple aggregated numbers from existing reports
+
+            // Minimum demo values — zero nahi dikhega
+            long baseSpend       = 34700L + (total * 6800L);
+            long baseConversions = 245L   + (total * 48L);
+            long baseAvgCost     = baseConversions > 0 ? baseSpend / baseConversions : 6800L;
+
             Map<String, Object> data = new LinkedHashMap<>();
-            data.put("totalReports",  total);
-            data.put("totalSpend",    total * 6800L);   // Demo calculation
-            data.put("conversions",   total * 48L);
-            data.put("avgCost",       total > 0 ? 6800 : 0);
+            data.put("totalReports",  Math.max(total, 3));   // minimum 3
+            data.put("totalSpend",    baseSpend);
+            data.put("conversions",   baseConversions);
+            data.put("avgCost",       baseAvgCost);
             data.put("reportType",    type);
             data.put("dateRange",     (start != null ? start : "") + " to " + (end != null ? end : ""));
 
